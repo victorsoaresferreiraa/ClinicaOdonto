@@ -1,0 +1,122 @@
+# =============================================================
+# application.yml — Configurações do Backend
+# =============================================================
+#
+# AULA: O QUE É ESTE ARQUIVO?
+# ============================
+# application.yml é o arquivo de configuração do Spring Boot.
+# Aqui definimos: porta, banco de dados, JWT, etc.
+#
+# AULA: YAML (Yet Another Markup Language)
+# =========================================
+# YAML usa INDENTAÇÃO (espaços) para representar hierarquia.
+# NÃO use TABs, use ESPAÇOS!
+#
+# Estrutura:
+#   parent:
+#     child: valor      ← equivale a parent.child=valor
+#
+# AULA: VARIÁVEIS DE AMBIENTE
+# ============================
+# Sintaxe: ${VARIAVEL_AMBIENTE:valor_padrao}
+# Ex: ${JWT_SECRET:meu-segredo}
+#   → Usa JWT_SECRET do ambiente se existir
+#   → Se não existir, usa "meu-segredo"
+#
+# Em produção, SEMPRE use variáveis de ambiente para segredos!
+# Nunca commit senhas no código!
+# =============================================================
+
+spring:
+  application:
+    name: lumay-odontologia
+
+  # -----------------------------------------------------------
+  # Banco de dados PostgreSQL
+  # -----------------------------------------------------------
+  # AULA: DataSource = configuração de conexão com o banco
+  datasource:
+    # URL de conexão: jdbc:postgresql://host:porta/nome_do_banco
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/lumay_db}
+    username: ${DB_USER:lumay_user}
+    password: ${DB_PASS:lumay_pass}
+    driver-class-name: org.postgresql.Driver
+
+  # -----------------------------------------------------------
+  # JPA (Java Persistence API) — O ORM do Spring
+  # -----------------------------------------------------------
+  # AULA: ORM = Object-Relational Mapping
+  # Traduz objetos Java em linhas de banco de dados automaticamente.
+  jpa:
+    hibernate:
+      # ddl-auto: o que o Hibernate faz com as tabelas ao subir
+      # validate = só verifica se as tabelas batem com as entities (NÃO cria)
+      # create   = recria as tabelas ao iniciar (CUIDADO: apaga dados!)
+      # update   = atualiza as tabelas sem apagar dados
+      # none     = não faz nada (Flyway cuida das migrations)
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Mostra as queries SQL executadas no log (útil para debug!)
+        show_sql: false   # true em desenvolvimento, false em produção
+        format_sql: true
+
+  # -----------------------------------------------------------
+  # Flyway — Controle de versão do banco de dados
+  # -----------------------------------------------------------
+  # AULA: Flyway roda automaticamente os arquivos V1__, V2__, V3__...
+  # na ordem, só uma vez cada. Mantém o histórico no banco.
+  flyway:
+    enabled: true
+    locations: classpath:db/migration  # onde estão os arquivos .sql
+    baseline-on-migrate: true          # permite rodar em banco já existente
+
+# -----------------------------------------------------------
+# JWT — Configuração do Token
+# -----------------------------------------------------------
+# AULA: O jwt.secret DEVE ser um Base64 de pelo menos 256 bits.
+# O valor abaixo é apenas para desenvolvimento local.
+# Em produção, gere um segredo forte e coloque em variável de ambiente!
+#
+# Como gerar um secret seguro:
+#   openssl rand -base64 64
+jwt:
+  secret: ${JWT_SECRET:dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBsdW1heSBvZG9udG9sb2dpYSBzeXN0ZW0gMjAyNA==}
+  expiration: ${JWT_EXPIRATION:86400000}  # 86400000ms = 24 horas
+
+# -----------------------------------------------------------
+# Servidor — Porta e contexto
+# -----------------------------------------------------------
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /  # raiz da aplicação
+
+# -----------------------------------------------------------
+# Actuator — Endpoints de saúde e monitoramento
+# -----------------------------------------------------------
+# AULA: Actuator é um módulo do Spring Boot para monitoramento.
+# /actuator/health → mostra se o sistema está saudável
+# Usado pelo Docker para o healthcheck!
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always  # mostra detalhes do banco, disco, etc.
+
+# -----------------------------------------------------------
+# Swagger / OpenAPI — Documentação da API
+# -----------------------------------------------------------
+# AULA: Swagger gera automaticamente uma página interativa
+# onde você pode testar todos os endpoints.
+# Acesse: http://localhost:8080/swagger-ui.html
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true  # permite testar os endpoints diretamente

@@ -1,0 +1,117 @@
+# ================================================================
+# docker-compose.yml — Lumay Odontologia
+# ================================================================
+#
+# ANTES DE RODAR PELA PRIMEIRA VEZ:
+#   cd frontend && npm install && cd ..
+#
+# DEPOIS:
+#   docker compose up -d --build
+#
+# ACESSE:
+#   http://localhost:3000          → Sistema
+#   http://localhost:8080/swagger-ui.html → API Docs
+#   http://localhost:5050          → Banco (PgAdmin)
+#   Login: admin@lumayodontologia.com.br / admin123
+# ================================================================
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumay_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lumay_db
+      POSTGRES_USER: lumay_user
+      POSTGRES_PASSWORD: lumay_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lumay_user -d lumay_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - lumay_net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lumay_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lumayodontologia.com.br
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - lumay_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lumay_backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DATABASE_URL: jdbc:postgresql://postgres:5432/lumay_db
+      DATABASE_USERNAME: lumay_user
+      DATABASE_PASSWORD: lumay_pass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lumay_db
+      SPRING_DATASOURCE_USERNAME: lumay_user
+      SPRING_DATASOURCE_PASSWORD: lumay_pass
+      SERVER_PORT: 8080
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    networks:
+      - lumay_net
+    volumes:
+      - app_logs:/var/log/lumay
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lumay_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - lumay_net
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  app_logs:
+
+networks:
+  lumay_net:
+    driver: bridge
