@@ -1,18 +1,9 @@
 # ================================================================
-# docker-compose.yml — Lumay Odontologia
+# docker-compose.yml — Lumay Odontologia (FULL DEVELOPMENT MODE)
 # ================================================================
-#
-# ANTES DE RODAR PELA PRIMEIRA VEZ:
-#   cd frontend && npm install && cd ..
-#
-# DEPOIS:
-#   docker compose up -d --build
-#
-# ACESSE:
-#   http://localhost:3000          → Sistema
-#   http://localhost:8080/swagger-ui.html → API Docs
-#   http://localhost:5050          → Banco (PgAdmin)
-#   Login: admin@lumayodontologia.com.br / admin123
+# 1. Garante Hot Reload no Frontend
+# 2. PgAdmin na porta 5055 (evita conflito)
+# 3. Persistência de dados e logs
 # ================================================================
 
 services:
@@ -49,7 +40,7 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
-      - "5050:80"
+      - "5055:80"
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,7 +51,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: /backend
       dockerfile: Dockerfile
     container_name: lumay_backend
     restart: unless-stopped
@@ -95,17 +86,19 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: lumay_frontend
-    restart: unless-stopped
+    restart: always
+    working_dir: /app
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080
-      NODE_ENV: production
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - WATCHPACK_POLLING=true
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # CRÍTICO: Isso protege o node_modules interno
+      - /app/.next          # CRÍTICO: Isso protege o cache de build interno
     ports:
       - "3000:3000"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - lumay_net
+    command: npm run dev
 
 volumes:
   postgres_data:

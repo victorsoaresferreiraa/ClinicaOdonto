@@ -2,13 +2,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import PageLayout from '@/components/layout/PageLayout'
 import { appointmentApi, patientApi, Appointment, Patient } from '@/lib/api'
+import { Calendar } from 'react-bootstrap-icons'
 
+// Status com cores adaptativas e transparência
 const STATUS: Record<string,{label:string;color:string}> = {
-  SCHEDULED: { label:'Agendado',   color:'bg-blue-100 text-blue-700'    },
-  CONFIRMED: { label:'Confirmado', color:'bg-green-100 text-green-700'  },
-  COMPLETED: { label:'Realizado',  color:'bg-gray-100 text-gray-600'    },
-  CANCELLED: { label:'Cancelado',  color:'bg-red-100 text-red-600'      },
-  NO_SHOW:   { label:'Não veio',   color:'bg-orange-100 text-orange-700'},
+  SCHEDULED: { label:'Agendado',   color:'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'    },
+  CONFIRMED: { label:'Confirmado', color:'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300'  },
+  COMPLETED: { label:'Realizado',  color:'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300'    },
+  CANCELLED: { label:'Cancelado',  color:'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300'      },
+  NO_SHOW:   { label:'Não veio',   color:'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300'},
 }
 const PROCEDURES = ['Limpeza dental','Clareamento dental','Consulta de avaliação','Restauração','Extração','Canal','Ortodontia','Outro']
 
@@ -21,25 +23,26 @@ export default function AppointmentsPage() {
   const [form,     setForm]     = useState({ patientId:'', startDateTime:'', endDateTime:'', procedure:'', notes:'' })
   const [formErr,  setFormErr]  = useState('')
   const [saving,   setSaving]   = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const pats = await patientApi.list()
+      const pats = await patientApi.findAll()
       setPatients(pats)
-      // Busca próximos 30 dias
-      const s = new Date().toISOString().slice(0,19)
-      const e = new Date(Date.now()+30*86400000).toISOString().slice(0,19)
       const all: Appointment[] = []
       for (const p of pats.filter(p=>p.active).slice(0,15)) {
-        try { all.push(...await appointmentApi.byPatient(p.id)) } catch {}
+        try { all.push(...await appointmentApi.findByPatient(p.id)) } catch {}
       }
       setAppts(all.sort((a,b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()))
     } catch { setError('Erro ao carregar agendamentos.') }
     finally   { setLoading(false) }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { 
+    setIsMounted(true)
+    load() 
+  }, [load])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault(); setFormErr(''); setSaving(true)
@@ -62,101 +65,106 @@ export default function AppointmentsPage() {
     try { await appointmentApi[action](id); load() } catch (err: any) { alert(err?.response?.data?.detail ?? 'Erro.') }
   }
 
-  const cls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  if (!isMounted) return null
+
+  const inputCls = "w-full bg-white/50 dark:bg-black/20 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-lumay-blue dark:focus:ring-blue-500 transition-all"
 
   return (
     <PageLayout
-      title="📅 Agendamentos"
-      subtitle="Gestão de consultas"
+      title="Agendamentos"
+      subtitle="Gestão de Consultas"
       action={
         <button onClick={()=>setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-          {showForm ? '✕ Fechar' : '+ Novo Agendamento'}
+          className="bg-lumay-blue text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500 transition-all shadow-md active:scale-95">
+          {showForm ? '✕ Fechar Cadastro' : '+ Novo Agendamento'}
         </button>
       }
     >
-      {/* Formulário */}
+      {/* Formulário com Efeito Vidro */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-blue-200 p-5 mb-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">+ Novo Agendamento</h2>
-          {formErr && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm mb-4">⚠️ {formErr}</div>}
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-white/80 dark:bg-black/50 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 p-6 mb-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <h2 className="font-black text-slate-800 dark:text-white mb-6 uppercase tracking-tight">Novo Agendamento</h2>
+          {formErr && <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-xl p-4 text-sm mb-6 font-medium">⚠️ {formErr}</div>}
+          
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Paciente *</label>
-              <select required value={form.patientId} onChange={e=>setForm(f=>({...f,patientId:e.target.value}))} className={cls}>
-                <option value="">Selecione...</option>
-                {patients.filter(p=>p.active).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Paciente *</label>
+              <select required value={form.patientId} onChange={e=>setForm(f=>({...f,patientId:e.target.value}))} className={inputCls}>
+                <option value="" className="dark:bg-slate-800">Selecione...</option>
+                {patients.filter(p=>p.active).map(p=><option key={p.id} value={p.id} className="dark:bg-slate-800">{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Procedimento *</label>
-              <select required value={form.procedure} onChange={e=>setForm(f=>({...f,procedure:e.target.value}))} className={cls}>
-                <option value="">Selecione...</option>
-                {PROCEDURES.map(p=><option key={p} value={p}>{p}</option>)}
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Procedimento *</label>
+              <select required value={form.procedure} onChange={e=>setForm(f=>({...f,procedure:e.target.value}))} className={inputCls}>
+                <option value="" className="dark:bg-slate-800">Selecione...</option>
+                {PROCEDURES.map(p=><option key={p} value={p} className="dark:bg-slate-800">{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Início *</label>
-              <input required type="datetime-local" value={form.startDateTime} onChange={e=>setForm(f=>({...f,startDateTime:e.target.value}))} min={new Date().toISOString().slice(0,16)} className={cls} />
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Início *</label>
+              <input required type="datetime-local" value={form.startDateTime} onChange={e=>setForm(f=>({...f,startDateTime:e.target.value}))} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Fim *</label>
-              <input required type="datetime-local" value={form.endDateTime} onChange={e=>setForm(f=>({...f,endDateTime:e.target.value}))} min={form.startDateTime} className={cls} />
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Fim *</label>
+              <input required type="datetime-local" value={form.endDateTime} onChange={e=>setForm(f=>({...f,endDateTime:e.target.value}))} className={inputCls} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
-              <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className={cls} />
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Observações</label>
+              <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Detalhes opcionais..." className={inputCls} />
             </div>
-            <div className="md:col-span-2 flex gap-3 justify-end">
-              <button type="button" onClick={()=>setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
-              <button type="submit" disabled={saving} className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60">{saving?'Salvando...':'✓ Salvar'}</button>
+            <div className="md:col-span-2 flex gap-3 justify-end mt-2 pt-4 border-t border-slate-200 dark:border-white/10">
+              <button type="button" onClick={()=>setShowForm(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">Cancelar</button>
+              <button type="submit" disabled={saving} className="px-6 py-2.5 text-sm font-bold bg-lumay-blue dark:bg-blue-600 text-white rounded-xl hover:bg-blue-800 dark:hover:bg-blue-500 shadow-md disabled:opacity-50 transition-all">{saving?'Agendando...':'✓ Salvar Consulta'}</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Lista */}
-      {loading ? (
-        <div className="flex justify-center py-16"><div className="animate-spin w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">{error}</div>
-      ) : appts.length === 0 ? (
-        <div className="bg-white rounded-xl border py-16 text-center"><span className="text-4xl block mb-3">📅</span><p className="text-gray-400 text-sm">Nenhum agendamento.</p></div>
-      ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>{['Paciente','Procedimento','Data/Hora','Status','Ações'].map(h=><th key={h} className="text-left py-3 px-4 font-medium text-gray-600 text-xs">{h}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {appts.map(a => {
-                const st   = STATUS[a.status]
-                const dt   = new Date(a.startDateTime)
-                const past = dt < new Date()
-                const canAct = !['COMPLETED','CANCELLED','NO_SHOW'].includes(a.status)
-                return (
-                  <tr key={a.id} className={`hover:bg-gray-50 ${past && canAct ? 'bg-yellow-50/30' : ''}`}>
-                    <td className="py-3 px-4 font-medium">{a.patientName ?? '—'}</td>
-                    <td className="py-3 px-4 text-gray-600">{a.procedure}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-medium">{dt.toLocaleDateString('pt-BR')}</span>
-                      <span className="text-gray-500 ml-1">{dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
-                    </td>
-                    <td className="py-3 px-4"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${st?.color}`}>{st?.label}</span></td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        {a.status==='SCHEDULED' && <button onClick={()=>act(a.id,'confirm')} className="text-xs text-green-600 hover:text-green-800 font-medium">Confirmar</button>}
-                        {canAct && ['SCHEDULED','CONFIRMED'].includes(a.status) && <button onClick={()=>act(a.id,'complete')} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Concluir</button>}
-                        {canAct && <button onClick={()=>act(a.id,'cancel')} className="text-xs text-red-500 hover:text-red-700">Cancelar</button>}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Lista Glassmorphism */}
+      <div className="bg-white/80 dark:bg-black/50 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden relative z-10">
+        {loading ? (
+          <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-lumay-blue dark:border-blue-500 border-t-transparent rounded-full" /></div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500 bg-red-500/5 font-bold">{error}</div>
+        ) : appts.length === 0 ? (
+          <div className="py-20 text-center"><span className="text-5xl block mb-4"><Calendar/></span><p className="text-slate-500 dark:text-slate-400 font-medium">Nenhum agendamento.</p></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                <tr>{['Paciente','Procedimento','Data/Hora','Status','Ações'].map(h=><th key={h} className="text-left py-4 px-6 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px]">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {appts.map(a => {
+                  const st   = STATUS[a.status]
+                  const dt   = new Date(a.startDateTime)
+                  const past = dt < new Date()
+                  const canAct = !['COMPLETED','CANCELLED','NO_SHOW'].includes(a.status)
+                  return (
+                    <tr key={a.id} className={`hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group ${past && canAct ? 'bg-yellow-50/50 dark:bg-yellow-500/5' : ''}`}>
+                      <td className="py-4 px-6 font-black text-slate-800 dark:text-white uppercase">{a.patientName ?? '—'}</td>
+                      <td className="py-4 px-6 text-slate-600 dark:text-slate-300 font-medium">{a.procedure}</td>
+                      <td className="py-4 px-6">
+                        <span className="font-bold text-slate-800 dark:text-white">{dt.toLocaleDateString('pt-BR')}</span>
+                        <span className="text-slate-500 dark:text-slate-400 ml-2 font-mono text-xs bg-slate-100 dark:bg-white/10 px-2 py-1 rounded-md">{dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+                      </td>
+                      <td className="py-4 px-6"><span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${st?.color}`}>{st?.label}</span></td>
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {a.status==='SCHEDULED' && <button onClick={()=>act(a.id,'confirm')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20">Confirmar</button>}
+                          {canAct && ['SCHEDULED','CONFIRMED'].includes(a.status) && <button onClick={()=>act(a.id,'complete')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-lumay-blue dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20">Concluir</button>}
+                          {canAct && <button onClick={()=>act(a.id,'cancel')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20">Cancelar</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </PageLayout>
   )
 }
