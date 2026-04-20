@@ -4,7 +4,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Lumay Odontologia',
   description: 'Sistema de gestão clínica — Lumay Odontologia',
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: '/icon.png' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
