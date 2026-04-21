@@ -11,14 +11,16 @@ import {
   BoxArrowRight,
   X, // Ícone de Fechar
   Cash,
-  GraphUp
+  GraphUp,
+  CurrencyDollar
 } from 'react-bootstrap-icons'
 
 const nav = [
-  { href: '/dashboard',    icon: <GraphUp />,    label: 'Dashboard'    },
+  { href: '/dashboard',    icon: <GraphUp />,          label: 'Dashboard'    },
   { href: '/patients',     icon: <PeopleFill />,       label: 'Pacientes'    },
   { href: '/appointments', icon: <CalendarDateFill />, label: 'Agendamentos' },
-  { href: '/payments',     icon: <Cash />,       label: 'Financeiro'   },
+  { href: '/payments',     icon: <Cash />,             label: 'Financeiro'   },
+  { href: '/procediments',     icon: <CurrencyDollar />,             label: 'Procedimentos'   },
 ]
 
 // Adicionamos as props para controlar a abertura no mobile
@@ -26,14 +28,19 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
   const path = usePathname()
   const router = useRouter()
   
-  const [user, setUser] = useState<{name?: string, role?: string}>({ name: 'Usuário', role: 'ADMIN' })
+  // Aceita tanto "name" quanto "userName" para evitar telas em branco
+  const [user, setUser] = useState<{name?: string, role?: string, userName?: string, userRole?: string}>({})
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
     const storedUser = localStorage.getItem('lumay_user')
     if (storedUser) {
-      try { setUser(JSON.parse(storedUser)) } catch (e) {}
+      try { 
+        setUser(JSON.parse(storedUser)) 
+      } catch (e) {
+        console.error("Erro ao ler usuário")
+      }
     }
   }, [])
 
@@ -49,6 +56,11 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
   }
 
   if (!isMounted) return <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white dark:bg-black z-40"></aside>
+
+  // 🛡️ Variáveis de Segurança (Garante que nunca ficará em branco)
+  const displayUserName = user?.name || user?.userName || 'Usuário'
+  const displayUserRole = user?.role || user?.userRole || 'ADMIN'
+  const initial = displayUserName.charAt(0).toUpperCase()
 
   return (
     <aside className={`fixed inset-y-0 left-0 w-64 bg-white/90 dark:bg-black/80 backdrop-blur-xl border-r border-slate-200 dark:border-white/10 flex flex-col z-40 shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out lg:translate-x-0
@@ -99,11 +111,11 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
       <div className="p-4 border-t border-slate-200 dark:border-white/10 shrink-0">
         <div className="flex items-center gap-3 px-2 mb-4">
           <div className="w-10 h-10 bg-gradient-to-tr from-lumay-blue to-blue-400 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0">
-            {user.name?.charAt(0)?.toUpperCase() ?? 'U'}
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-slate-800 dark:text-white truncate">{user.name}</p>
-            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{user.role}</p>
+            <p className="text-sm font-black text-slate-800 dark:text-white truncate">{displayUserName}</p>
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{displayUserRole}</p>
           </div>
         </div>
         
