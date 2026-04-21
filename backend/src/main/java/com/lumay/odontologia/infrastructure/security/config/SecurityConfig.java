@@ -157,7 +157,7 @@ public class SecurityConfig {
         // Origens permitidas (o frontend)
         cfg.setAllowedOrigins(List.of(
                 "http://localhost:3000",   // Next.js em desenvolvimento
-                "http://localhost:8080"    // chamadas diretas (Swagger, etc.)
+                "http://localhost:8080" ,   // chamadas diretas (Swagger, etc.)
                 "https://clinica-odonto-phi.vercel.app" // URL DA VERCEL 
         ));
 
