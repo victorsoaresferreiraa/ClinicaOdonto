@@ -152,26 +152,19 @@ public class SecurityConfig {
      */
     @Bean
     public CorsConfigurationSource corsSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
+    CorsConfiguration cfg = new CorsConfiguration();
+    
+    // Libera QUALQUER origem para eliminar o erro do navegador
+    cfg.setAllowedOrigins(List.of("*")); 
+    
+    cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+    
+    // IMPORTANTE: Se usar "*", isso DEVE ser false, senão o navegador dá erro
+    cfg.setAllowCredentials(false); 
 
-        // Origens permitidas (o frontend)
-        cfg.setAllowedOrigins(List.of(
-                "http://localhost:3000",   // Next.js em desenvolvimento
-                "http://localhost:8080" ,   // chamadas diretas (Swagger, etc.)
-                "https://clinica-odonto-phi.vercel.app" // URL DA VERCEL 
-        ));
-
-        // Métodos HTTP permitidos
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // Headers que o frontend pode enviar
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-
-        // Permite credenciais (cookies, Authorization header)
-        cfg.setAllowCredentials(true);
-
-        var src = new UrlBasedCorsConfigurationSource();
-        src.registerCorsConfiguration("/**", cfg);  // aplica para todas as rotas
-        return src;
-    }
+    var src = new UrlBasedCorsConfigurationSource();
+    src.registerCorsConfiguration("/**", cfg);
+    return src;
+}
 }
