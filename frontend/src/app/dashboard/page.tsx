@@ -17,7 +17,7 @@ const statusLabel: Record<string, { label: string; color: string }> = {
 function KpiCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
     <div className="bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-xl border border-slate-200 dark:border-white/10 p-5 shadow-sm transition-all hover:scale-[1.02]">
-      <div className="text-2xl mb-2 font-semibold text-lumay-blue">{icon}</div>
+      <div className="text-2xl mb-2 font-semibold text-lumay-blue dark:text-blue-400">{icon}</div>
       <div className="text-2xl font-bold text-slate-900 dark:text-white">{value}</div>
       <div className="text-xs font-semibold text-lumay-blue dark:text-blue-400 uppercase tracking-wider mt-1">{label}</div>
       {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
