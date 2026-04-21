@@ -41,7 +41,7 @@ export default function AppointmentsPage() {
       const all: Appointment[] = []
       // Percorre os pacientes ativos e traz os agendamentos deles
       for (const p of pats.filter(p=>p.active).slice(0,15)) {
-        try { all.push(...await appointmentApi.byPatient(p.id)) } catch {}
+        try { all.push(...await appointmentApi.findByPatient(p.id)) } catch {}
       }
       
       // Organiza por data (o mais recente primeiro)
