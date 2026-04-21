@@ -32,7 +32,7 @@ export default function AppointmentsPage() {
       setPatients(pats)
       const all: Appointment[] = []
       for (const p of pats.filter(p=>p.active).slice(0,15)) {
-        try { all.push(...await appointmentApi.byPatient(p.id)) } catch {}
+        try { all.push(...await appointmentApi.findByPatient(p.id)) } catch {}
       }
       setAppts(all.sort((a,b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()))
     } catch { 
